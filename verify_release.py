@@ -10,6 +10,7 @@ import tarfile
 import datetime
 import shutil
 import glob
+import platform
 from pathlib import Path
 
 def download_file(url, filename):
@@ -32,9 +33,16 @@ def verify_hashes(filename):
             hash_num = hash_type[3:]  # Get the number part (256, 512, etc.)
             
             try:
-                # Get actual hash using shasum command
-                result = subprocess.run(['shasum', '-a', hash_num, filename], 
-                                      capture_output=True, text=True)
+                # Choose appropriate command based on OS
+                if platform.system().lower() == 'linux':
+                    # Linux uses sha256sum, sha512sum, etc.
+                    cmd = [f"sha{hash_num}sum", filename]
+                else:
+                    # macOS and others use shasum with -a flag
+                    cmd = ['shasum', '-a', hash_num, filename]
+                
+                # Get actual hash using appropriate command
+                result = subprocess.run(cmd, capture_output=True, text=True)
                 if result.returncode != 0:
                     hash_results[hash_type] = False
                     continue
@@ -98,12 +106,19 @@ def verify_gpg(filename, base_url):
             
             # Extract project name from URL path
             # URL format: https://dist.apache.org/repos/dist/dev/PROJECT/...
+            # or: https://dist.apache.org/repos/dist/dev/incubator/PROJECT/...
             url_parts = base_url.split('/')
             if 'dist' in url_parts and 'dev' in url_parts:
                 dev_index = url_parts.index('dev')
                 if dev_index + 1 < len(url_parts):
-                    project = url_parts[dev_index + 1]
-                    keys_url = f"https://downloads.apache.org/{project}/KEYS"
+                    if url_parts[dev_index + 1] == 'incubator' and dev_index + 2 < len(url_parts):
+                        # Incubator project
+                        project = url_parts[dev_index + 2]
+                        keys_url = f"https://downloads.apache.org/incubator/{project}/KEYS"
+                    else:
+                        # Top-level project
+                        project = url_parts[dev_index + 1]
+                        keys_url = f"https://downloads.apache.org/{project}/KEYS"
                     
                     try:
                         print(f"  Attempting to download KEYS file from {keys_url}")
@@ -130,7 +145,7 @@ def verify_gpg(filename, base_url):
 def extract_and_check_license(archive):
     try:
         with tarfile.open(archive, 'r:*') as tar:
-            tar.extractall()
+            tar.extractall(filter='data')
             # Get the top-level directory name
             members = tar.getnames()
             if not members:
