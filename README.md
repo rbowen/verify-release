@@ -1,0 +1,84 @@
+# Apache Release Verification Tools
+
+This repository contains two Python scripts for Apache project release management and verification.
+
+## verify_release.py
+
+Automates the verification of Apache release candidates by downloading, extracting, and validating release artifacts.
+
+### Features
+
+- Downloads all release files (.tgz, .tar.gz, .asc, .sha512) from Apache distribution URLs
+- Verifies SHA512 checksums with detailed mismatch reporting
+- Validates GPG signatures (automatically downloads KEYS file if needed)
+- Extracts archives and checks for required LICENSE and NOTICE files
+- Reports if NOTICE file contains current year
+- Skips already downloaded files
+- Cleanup functionality to remove all downloaded and extracted files
+
+### Usage
+
+```bash
+# Verify a release
+python3 verify_release.py https://dist.apache.org/repos/dist/dev/spark/v4.2.0-preview1-rc1-bin/
+
+# Clean up all downloaded files and extracted directories
+python3 verify_release.py --cleanup
+```
+
+### Output
+
+The script generates a comprehensive verification report showing:
+- SHA512 verification status (with highlighted differences on mismatch)
+- GPG signature verification status
+- LICENSE file presence
+- NOTICE file presence and current year check
+
+## findvote.py
+
+Searches Apache project mailing lists for [VOTE] threads on release candidates and tracks voting participation.
+
+### Features
+
+- Fetches mbox archives from Apache dev mailing lists for current month
+- Identifies [VOTE] threads containing dist.apache.org URLs
+- Tracks whether rbowen@apache.org has voted in each thread
+- Reads project list from `projects.txt` file for easy customization
+
+### Configuration
+
+Edit `projects.txt` to configure email addresses and projects to monitor:
+- Email lines: `email:your@apache.org` (one line per email address)
+- Project lines: One project name per line
+
+### Usage
+
+```bash
+# Find votes you haven't participated in
+python3 findvote.py
+
+# Find votes you have already participated in
+python3 findvote.py --voted
+```
+
+### Output
+
+Lists vote threads with:
+- Email subject line
+- Associated dist.apache.org URLs for release verification
+- Voting participation status
+
+## Requirements
+
+Both scripts use only Python standard library modules and require:
+- Python 3.6+
+- `shasum` command (for SHA512 verification)
+- `gpg` command (for signature verification)
+
+## Workflow
+
+Typical usage pattern:
+1. Run `findvote.py` to find pending votes
+2. Use `verify_release.py` with URLs from vote threads to verify releases
+3. Vote on the mailing list after verification
+4. Use `verify_release.py --cleanup` to clean up verification files

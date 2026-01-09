@@ -1,0 +1,16 @@
+email:rbowen@apache.org
+email:rbowen@rcbowen.com
+activemq
+airflow
+arrow
+calcite
+cassandra
+druid
+flink
+hadoop
+iceberg
+kafka
+lucene
+parquet
+spark
+zeppelin
