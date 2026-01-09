@@ -8,8 +8,8 @@ Automates the verification of Apache release candidates by downloading, extracti
 
 ### Features
 
-- Downloads all release files (.tgz, .tar.gz, .asc, .sha512) from Apache distribution URLs
-- Verifies SHA512 checksums with detailed mismatch reporting
+- Downloads all release files (.tgz, .tar.gz, .asc, .sha256/512) from Apache distribution URLs
+- Verifies SHA256/512 checksums with detailed mismatch reporting
 - Validates GPG signatures (automatically downloads KEYS file if needed)
 - Extracts archives and checks for required LICENSE and NOTICE files
 - Reports if NOTICE file contains current year
@@ -29,7 +29,7 @@ python3 verify_release.py --cleanup
 ### Output
 
 The script generates a comprehensive verification report showing:
-- SHA512 verification status (with highlighted differences on mismatch)
+- SHA256/512 verification status (with highlighted differences on mismatch)
 - GPG signature verification status
 - LICENSE file presence
 - NOTICE file presence and current year check
@@ -42,7 +42,7 @@ Searches Apache project mailing lists for [VOTE] threads on release candidates a
 
 - Fetches mbox archives from Apache dev mailing lists for current month
 - Identifies [VOTE] threads containing dist.apache.org URLs
-- Tracks whether rbowen@apache.org has voted in each thread
+- Tracks whether the email address in projects.txt has already voted in each thread
 - Reads project list from `projects.txt` file for easy customization
 
 ### Configuration
@@ -72,7 +72,7 @@ Lists vote threads with:
 
 Both scripts use only Python standard library modules and require:
 - Python 3.6+
-- `shasum` command (for SHA512 verification)
+- `shasum` command (for SHA256/512 verification)
 - `gpg` command (for signature verification)
 
 ## Workflow
@@ -80,5 +80,5 @@ Both scripts use only Python standard library modules and require:
 Typical usage pattern:
 1. Run `findvote.py` to find pending votes
 2. Use `verify_release.py` with URLs from vote threads to verify releases
-3. Vote on the mailing list after verification
+3. Vote on the mailing list after verification. (You should do your own verification as well. This is just to automate the boring stuff!!)
 4. Use `verify_release.py --cleanup` to clean up verification files
