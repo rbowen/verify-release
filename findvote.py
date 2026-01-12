@@ -57,8 +57,8 @@ def find_vote_threads(messages, show_voted=False, emails=None):
             else:
                 body = str(msg.get_payload())
         
-        # Look for [VOTE] in subject
-        if '[VOTE]' in subject.upper():
+        # Look for [VOTE] in subject, but ignore [RESULT] threads
+        if '[VOTE]' in subject.upper() and '[RESULT]' not in subject.upper():
             # Look for dist.apache.org URLs in the body
             dist_urls = re.findall(r'https://dist\.apache\.org/repos/dist/dev/[^\s<>]+', body)
             
