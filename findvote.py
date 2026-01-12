@@ -44,22 +44,41 @@ def find_vote_threads(messages, show_voted=False, emails=None):
         subject = msg.get('Subject', '')
         message_id = msg.get('Message-ID', '')
         from_addr = msg.get('From', '')
-        body = str(msg.get_payload())
+        # Handle multipart messages properly
+        if msg.is_multipart():
+            body = ""
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    body += str(part.get_payload(decode=True), 'utf-8', errors='ignore')
+        else:
+            payload = msg.get_payload(decode=True)
+            if payload:
+                body = str(payload, 'utf-8', errors='ignore')
+            else:
+                body = str(msg.get_payload())
         
         # Look for [VOTE] in subject
         if '[VOTE]' in subject.upper():
             # Look for dist.apache.org URLs in the body
             dist_urls = re.findall(r'https://dist\.apache\.org/repos/dist/dev/[^\s<>]+', body)
             
+            # Create normalized thread key by removing Re:, [VOTE], and extra whitespace
+            thread_key = re.sub(r'^(Re:\s*)*\[VOTE\]\s*', '', subject, flags=re.IGNORECASE).strip()
+            
+            # Always create/update thread entry, even without URLs (they might be in replies)
+            if thread_key not in vote_threads:
+                vote_threads[thread_key] = {
+                    'subject': subject,
+                    'urls': [],
+                    'email_voted': False,
+                    'message_id': message_id
+                }
+            
+            # Add any URLs found in this message
             if dist_urls:
-                thread_key = re.sub(r'^\[VOTE\]\s*', '', subject, flags=re.IGNORECASE).strip()
-                if thread_key not in vote_threads:
-                    vote_threads[thread_key] = {
-                        'subject': subject,
-                        'urls': dist_urls,
-                        'email_voted': False,
-                        'message_id': message_id
-                    }
+                vote_threads[thread_key]['urls'].extend(dist_urls)
+                # Remove duplicates while preserving order
+                vote_threads[thread_key]['urls'] = list(dict.fromkeys(vote_threads[thread_key]['urls']))
         
         # Check if any specified email has voted in any thread
         if emails and any(email in from_addr for email in emails) and any(word in body.lower() for word in ['+1', 'vote']):
@@ -68,9 +87,12 @@ def find_vote_threads(messages, show_voted=False, emails=None):
                 if any(word in subject.lower() for word in thread_key.lower().split()[:3]):
                     vote_threads[thread_key]['email_voted'] = True
     
+    # Filter to only threads that have URLs
+    filtered_with_urls = {k: v for k, v in vote_threads.items() if v['urls']}
+    
     # Filter based on show_voted flag
     filtered = {}
-    for key, thread in vote_threads.items():
+    for key, thread in filtered_with_urls.items():
         if show_voted == thread['email_voted']:
             filtered[key] = thread
     
