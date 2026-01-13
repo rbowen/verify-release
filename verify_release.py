@@ -27,19 +27,24 @@ def verify_hashes(filename):
     
     # Look for all hash files for this archive
     for hash_file in glob.glob(f"{filename}.sha*"):
-        # Extract hash type from filename (e.g., sha256, sha512)
+        # Extract hash type from filename (e.g., sha1, sha256, sha512)
         hash_type = hash_file.split('.')[-1]
         if hash_type.startswith('sha'):
-            hash_num = hash_type[3:]  # Get the number part (256, 512, etc.)
+            hash_num = hash_type[3:]  # Get the number part (1, 256, 512, etc.)
             
             try:
-                # Choose appropriate command based on OS
+                # Choose appropriate command based on OS and hash type
                 if platform.system().lower() == 'linux':
-                    # Linux uses sha256sum, sha512sum, etc.
-                    cmd = [f"sha{hash_num}sum", filename]
+                    if hash_num == '1':
+                        cmd = ['sha1sum', filename]
+                    else:
+                        cmd = [f"sha{hash_num}sum", filename]
                 else:
-                    # macOS and others use shasum with -a flag
-                    cmd = ['shasum', '-a', hash_num, filename]
+                    # macOS and others use shasum
+                    if hash_num == '1':
+                        cmd = ['shasum', filename]  # SHA1 is default for shasum
+                    else:
+                        cmd = ['shasum', '-a', hash_num, filename]
                 
                 # Get actual hash using appropriate command
                 result = subprocess.run(cmd, capture_output=True, text=True)
@@ -58,7 +63,7 @@ def verify_hashes(filename):
                         hash_part = content
                     
                     hex_chars = re.findall(r'[a-fA-F0-9]', hash_part)
-                    expected_length = int(hash_num) // 4  # Convert bits to hex chars
+                    expected_length = int(hash_num) // 4 if hash_num != '1' else 40  # SHA1 is 160 bits = 40 hex chars
                     
                     if len(hex_chars) >= expected_length:
                         expected = ''.join(hex_chars[:expected_length]).lower()
@@ -251,7 +256,7 @@ def main():
         sys.exit(1)
     
     # Extract file links
-    files = re.findall(r'href="([^"]*\.(?:tgz|tar\.gz|sha\d+|asc))"', html)
+    files = re.findall(r'href="([^"]*\.(?:tgz|tar\.gz|sha\d+|sha1|asc))"', html)
     
     if not files:
         print("No files found")
