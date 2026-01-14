@@ -172,7 +172,7 @@ def extract_and_check_license(archive):
             notice_path = None
             for name in ['NOTICE', 'NOTICE.txt']:
                 path = top_path / name
-                if path.exists():
+                if path.exists() and path.stat().st_size > 0:
                     notice_path = path
                     break
             has_notice = notice_path is not None
