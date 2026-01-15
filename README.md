@@ -2,6 +2,14 @@
 
 This repository contains two Python scripts for Apache project release management and verification.
 
+## Workflow
+
+Typical usage pattern:
+1. Run `findvote.py` to find pending votes
+2. Use `verify_release.py` with URLs from vote threads to verify releases
+3. Vote on the mailing list after verification. (You should do your own verification as well. This is just to automate the boring stuff!!)
+4. Use `verify_release.py --cleanup` to clean up verification files
+
 ## verify_release.py
 
 Automates the verification of Apache release candidates by downloading, extracting, and validating release artifacts.
@@ -78,14 +86,6 @@ Both scripts use only Python standard library modules and require:
 - Python 3.6+
 - `shasum` command (for SHA256/512 verification)
 - `gpg` command (for signature verification)
-
-## Workflow
-
-Typical usage pattern:
-1. Run `findvote.py` to find pending votes
-2. Use `verify_release.py` with URLs from vote threads to verify releases
-3. Vote on the mailing list after verification. (You should do your own verification as well. This is just to automate the boring stuff!!)
-4. Use `verify_release.py --cleanup` to clean up verification files
 
 ## Caveat
 
