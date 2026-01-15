@@ -7,6 +7,7 @@ import urllib.error
 import hashlib
 import subprocess
 import tarfile
+import zipfile
 import datetime
 import shutil
 import glob
@@ -149,46 +150,53 @@ def verify_gpg(filename, base_url):
 
 def extract_and_check_license(archive):
     try:
-        with tarfile.open(archive, 'r:*') as tar:
-            tar.extractall(filter='data')
-            # Get the top-level directory name
-            members = tar.getnames()
-            if not members:
-                return None, None, None
-            
-            top_dir = members[0].split('/')[0]
-            top_path = Path(top_dir)
-            
-            # Check for LICENSE file (with or without .txt extension)
-            license_path = None
-            for name in ['LICENSE', 'LICENSE.txt']:
-                path = top_path / name
-                if path.exists():
-                    license_path = path
-                    break
-            has_license = license_path is not None
-            
-            # Check for NOTICE file (with or without .txt extension)
-            notice_path = None
-            for name in ['NOTICE', 'NOTICE.txt']:
-                path = top_path / name
-                if path.exists() and path.stat().st_size > 0:
-                    notice_path = path
-                    break
-            has_notice = notice_path is not None
-            
-            current_year = str(datetime.datetime.now().year)
-            notice_has_current_year = False
-            
-            if has_notice:
-                try:
-                    with open(notice_path, 'r') as f:
-                        notice_content = f.read()
-                        notice_has_current_year = current_year in notice_content
-                except Exception:
-                    pass
-            
-            return has_license, has_notice, notice_has_current_year
+        # Handle zip files
+        if archive.endswith('.zip'):
+            with zipfile.ZipFile(archive, 'r') as zf:
+                zf.extractall()
+                members = zf.namelist()
+        else:
+            # Handle tar.gz and tgz files
+            with tarfile.open(archive, 'r:*') as tar:
+                tar.extractall(filter='data')
+                members = tar.getnames()
+        
+        if not members:
+            return None, None, None
+        
+        top_dir = members[0].split('/')[0]
+        top_path = Path(top_dir)
+        
+        # Check for LICENSE file (with or without .txt extension)
+        license_path = None
+        for name in ['LICENSE', 'LICENSE.txt']:
+            path = top_path / name
+            if path.exists():
+                license_path = path
+                break
+        has_license = license_path is not None
+        
+        # Check for NOTICE file (with or without .txt extension)
+        notice_path = None
+        for name in ['NOTICE', 'NOTICE.txt']:
+            path = top_path / name
+            if path.exists() and path.stat().st_size > 0:
+                notice_path = path
+                break
+        has_notice = notice_path is not None
+        
+        current_year = str(datetime.datetime.now().year)
+        notice_has_current_year = False
+        
+        if has_notice:
+            try:
+                with open(notice_path, 'r') as f:
+                    notice_content = f.read()
+                    notice_has_current_year = current_year in notice_content
+            except Exception:
+                pass
+        
+        return has_license, has_notice, notice_has_current_year
     except Exception as e:
         print(f"Error extracting {archive}: {e}")
         return False, False, False
@@ -199,14 +207,19 @@ def cleanup():
     
     # First, identify extracted directories by checking what archives exist/existed
     extracted_dirs = set()
-    for pattern in ['*.tgz', '*.tar.gz']:
+    for pattern in ['*.tgz', '*.tar.gz', '*.zip']:
         for archive in glob.glob(pattern):
             try:
-                with tarfile.open(archive, 'r:*') as tar:
-                    members = tar.getnames()
-                    if members:
-                        top_dir = members[0].split('/')[0]
-                        extracted_dirs.add(top_dir)
+                if archive.endswith('.zip'):
+                    with zipfile.ZipFile(archive, 'r') as zf:
+                        members = zf.namelist()
+                else:
+                    with tarfile.open(archive, 'r:*') as tar:
+                        members = tar.getnames()
+                
+                if members:
+                    top_dir = members[0].split('/')[0]
+                    extracted_dirs.add(top_dir)
             except:
                 pass
     
@@ -217,7 +230,7 @@ def cleanup():
             removed.append(f"{dir_name}/")
     
     # Remove archive files and signatures
-    for pattern in ['*.tgz', '*.tar.gz', '*.asc', '*.sha*']:
+    for pattern in ['*.tgz', '*.tar.gz', '*.zip', '*.asc', '*.sha*']:
         for file in glob.glob(pattern):
             Path(file).unlink()
             removed.append(file)
@@ -256,7 +269,7 @@ def main():
         sys.exit(1)
     
     # Extract file links
-    files = re.findall(r'href="([^"]*\.(?:tgz|tar\.gz|sha\d+|sha1|asc))"', html)
+    files = re.findall(r'href="([^"]*\.(?:tgz|tar\.gz|zip|sha\d+|sha1|asc))"', html)
     
     if not files:
         print("No files found")
@@ -271,7 +284,7 @@ def main():
             download_file(f"{url}/{filename}", filename)
     
     # Verify archives
-    archives = [f for f in files if f.endswith(('.tgz', '.tar.gz'))]
+    archives = [f for f in files if f.endswith(('.tgz', '.tar.gz', '.zip'))]
     results = []
     
     for archive in archives:
