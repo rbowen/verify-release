@@ -6,6 +6,7 @@ import urllib.request
 import urllib.error
 import email
 import datetime
+import argparse
 from io import StringIO
 
 def fetch_mbox(project, month):
@@ -99,7 +100,10 @@ def find_vote_threads(messages, show_voted=False, emails=None):
     return filtered
 
 def main():
-    show_voted = '--voted' in sys.argv
+    parser = argparse.ArgumentParser(description='Find Apache project vote threads')
+    parser.add_argument('--voted', action='store_true', help='Show threads you have voted on')
+    parser.add_argument('-p', '--project', help='Check only a specific project')
+    args = parser.parse_args()
     
     # Read configuration from external file
     try:
@@ -123,16 +127,20 @@ def main():
         print("Error: No email configuration found in projects.txt")
         sys.exit(1)
     
+    # Use specified project or all projects from file
+    if args.project:
+        projects = [args.project]
+    
     current_month = datetime.datetime.now().strftime('%Y-%m')
     
     print(f"Checking for [VOTE] threads in {current_month}")
-    print(f"Looking for threads {', '.join(emails)} {'HAS' if show_voted else 'has NOT'} voted on\n")
+    print(f"Looking for threads {', '.join(emails)} {'HAS' if args.voted else 'has NOT'} voted on\n")
     
     for project in projects:
         print(f"Checking {project}...")
         mbox_content = fetch_mbox(project, current_month)
         messages = parse_mbox(mbox_content)
-        vote_threads = find_vote_threads(messages, show_voted, emails)
+        vote_threads = find_vote_threads(messages, args.voted, emails)
         
         if vote_threads:
             print(f"\n=== {project.upper()} ===")

@@ -59,6 +59,10 @@ python3 findvote.py
 
 # Find votes you have already participated in
 python3 findvote.py --voted
+
+# Specify a particular project you want to query
+python3 findvote.py -p kafka
+python3 findvote.py --project airflow
 ```
 
 ### Output
