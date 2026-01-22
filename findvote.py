@@ -40,6 +40,7 @@ def parse_mbox(mbox_content):
 def find_vote_threads(messages, show_voted=False, emails=None):
     """Find VOTE threads and check if any specified email has voted"""
     vote_threads = {}
+    result_threads = set()
     
     for msg in messages:
         subject = msg.get('Subject', '')
@@ -58,13 +59,20 @@ def find_vote_threads(messages, show_voted=False, emails=None):
             else:
                 body = str(msg.get_payload())
         
+        # Track [RESULT] threads
+        if '[RESULT]' in subject.upper():
+            thread_key = re.sub(r'^(Re:\s*)+', '', subject, flags=re.IGNORECASE)
+            thread_key = re.sub(r'^(\[RESULT[S]?\]\s*)?(\[VOTE\]\s*)?', '', thread_key, flags=re.IGNORECASE).strip()
+            result_threads.add(thread_key)
+        
         # Look for [VOTE] in subject, but ignore [RESULT] threads
         if '[VOTE]' in subject.upper() and '[RESULT]' not in subject.upper():
             # Look for dist.apache.org URLs in the body
             dist_urls = re.findall(r'https://dist\.apache\.org/repos/dist/dev/[^\s<>]+', body)
             
             # Create normalized thread key by removing Re:, [VOTE], and extra whitespace
-            thread_key = re.sub(r'^(Re:\s*)*\[VOTE\]\s*', '', subject, flags=re.IGNORECASE).strip()
+            thread_key = re.sub(r'^(Re:\s*)+', '', subject, flags=re.IGNORECASE)
+            thread_key = re.sub(r'^\[VOTE\]\s*', '', thread_key, flags=re.IGNORECASE).strip()
             
             # Always create/update thread entry, even without URLs (they might be in replies)
             if thread_key not in vote_threads:
@@ -87,6 +95,9 @@ def find_vote_threads(messages, show_voted=False, emails=None):
             for thread_key in vote_threads:
                 if any(word in subject.lower() for word in thread_key.lower().split()[:3]):
                     vote_threads[thread_key]['email_voted'] = True
+    
+    # Filter out votes that have corresponding results
+    vote_threads = {k: v for k, v in vote_threads.items() if k not in result_threads}
     
     # Filter to only threads that have URLs
     filtered_with_urls = {k: v for k, v in vote_threads.items() if v['urls']}
