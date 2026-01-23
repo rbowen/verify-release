@@ -112,8 +112,8 @@ def find_vote_threads(messages, show_voted=False, emails=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Find Apache project vote threads')
+    parser.add_argument('project', nargs='?', help='Check only a specific project')
     parser.add_argument('--voted', action='store_true', help='Show threads you have voted on')
-    parser.add_argument('-p', '--project', help='Check only a specific project')
     args = parser.parse_args()
     
     # Read configuration from external file
