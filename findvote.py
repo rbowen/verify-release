@@ -62,7 +62,7 @@ def find_vote_threads(messages, show_voted=False, emails=None):
         # Track [RESULT] threads
         if '[RESULT]' in subject.upper():
             thread_key = re.sub(r'^(Re:\s*)+', '', subject, flags=re.IGNORECASE)
-            thread_key = re.sub(r'^(\[RESULT[S]?\]\s*)?(\[VOTE\]\s*)?', '', thread_key, flags=re.IGNORECASE).strip()
+            thread_key = re.sub(r'^(\[RESULT[S]?\]\s*)?(\[VOTE\]\s*)?(\[RESULT[S]?\]\s*)?', '', thread_key, flags=re.IGNORECASE).strip()
             result_threads.add(thread_key)
         
         # Look for [VOTE] in subject, but ignore [RESULT] threads
